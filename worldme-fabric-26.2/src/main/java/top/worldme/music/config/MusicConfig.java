@@ -23,6 +23,9 @@ public class MusicConfig {
 
     private float volume = 1.0f;
     private int playMode = WorldmeMusic.MODE_SERVER;
+    private boolean showHudLyrics = true;
+    private float hudLyricsX = 0.5f;
+    private float hudLyricsY = 0.85f;
 
     public void load() {
         if (!Files.exists(FILE)) {
@@ -33,6 +36,9 @@ public class MusicConfig {
             props.load(in);
             volume = clamp(parseFloat(props.getProperty("volume"), 1.0f));
             playMode = parseInt(props.getProperty("mode"), WorldmeMusic.MODE_SERVER);
+            showHudLyrics = Boolean.parseBoolean(props.getProperty("hud-lyrics", "true"));
+            hudLyricsX = clamp(parseFloat(props.getProperty("hud-lyrics-x"), 0.5f));
+            hudLyricsY = clamp(parseFloat(props.getProperty("hud-lyrics-y"), 0.85f));
         } catch (IOException ignored) {
         }
     }
@@ -41,6 +47,9 @@ public class MusicConfig {
         Properties props = new Properties();
         props.setProperty("volume", String.valueOf(volume));
         props.setProperty("mode", String.valueOf(playMode));
+        props.setProperty("hud-lyrics", String.valueOf(showHudLyrics));
+        props.setProperty("hud-lyrics-x", String.valueOf(hudLyricsX));
+        props.setProperty("hud-lyrics-y", String.valueOf(hudLyricsY));
         try {
             Files.createDirectories(FILE.getParent());
             try (OutputStream out = Files.newOutputStream(FILE)) {
@@ -64,6 +73,30 @@ public class MusicConfig {
 
     public void setPlayMode(int playMode) {
         this.playMode = playMode;
+    }
+
+    public boolean isShowHudLyrics() {
+        return showHudLyrics;
+    }
+
+    public void setShowHudLyrics(boolean showHudLyrics) {
+        this.showHudLyrics = showHudLyrics;
+    }
+
+    public float getHudLyricsX() {
+        return hudLyricsX;
+    }
+
+    public void setHudLyricsX(float hudLyricsX) {
+        this.hudLyricsX = clamp(hudLyricsX);
+    }
+
+    public float getHudLyricsY() {
+        return hudLyricsY;
+    }
+
+    public void setHudLyricsY(float hudLyricsY) {
+        this.hudLyricsY = clamp(hudLyricsY);
     }
 
     private static float clamp(float value) {

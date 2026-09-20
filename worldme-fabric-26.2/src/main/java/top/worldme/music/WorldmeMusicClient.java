@@ -7,12 +7,17 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 import top.worldme.music.config.MusicConfig;
 import top.worldme.music.event.ClientEvent;
+import top.worldme.music.gui.HudLyrics;
 import top.worldme.music.gui.WorldmeMusicScreen;
+import top.worldme.music.manager.PersonalPlayback;
+import top.worldme.music.manager.PlaybackProgress;
 import top.worldme.music.net.ModNetwork;
 import top.worldme.music.net.MusicPacketHandler;
 
@@ -30,6 +35,7 @@ public class WorldmeMusicClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ModNetwork.register();
+        WorldmeMusic.setTrackEndListener(() -> Minecraft.getInstance().execute(PersonalPlayback::onTrackEnded));
 
         CONFIG = new MusicConfig();
         CONFIG.load();
@@ -44,6 +50,7 @@ public class WorldmeMusicClient implements ClientModInitializer {
                 "key.worldmemusic.open", GLFW.GLFW_KEY_M, KeyMapping.Category.MISC));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            PlaybackProgress.update();
             if (!volumeApplied) {
                 WorldmeMusicPlayer current = WorldmeMusic.getPlayer();
                 if (current != null) {
@@ -65,6 +72,9 @@ public class WorldmeMusicClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(ModNetwork.MusicPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> MusicPacketHandler.handle(payload.str())));
+
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("worldmemusic", "lyrics"),
+                (graphics, delta) -> HudLyrics.render(graphics));
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientEvent.onDisconnect());
     }

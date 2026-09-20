@@ -6,6 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import top.worldme.music.PacketTags;
 
 import java.nio.charset.StandardCharsets;
 
@@ -72,22 +73,26 @@ public final class ModNetwork {
     }
 
     public static void sendSearch(String keyword) {
-        send("[Search]" + keyword);
+        send(PacketTags.SEARCH + keyword);
     }
 
     public static void sendSearchPage(String action) {
-        send("[SearchPage]" + action);
+        send(PacketTags.SEARCH_PAGE + action);
     }
 
     public static void sendAddPub(long songId) {
-        send("[AddPub]" + songId);
+        send(PacketTags.ADD_PUB + songId);
     }
 
     public static void sendAddPriv(long songId) {
-        send("[AddPriv]" + songId);
+        send(PacketTags.ADD_PRIV + songId);
+    }
+
+    public static void sendPlayPrivateReq(long songId) {
+        send(PacketTags.PLAY_PRIV_REQ + songId);
     }
 
     public static void sendQueueReq() {
-        send("[QueueReq]");
+        send(PacketTags.QUEUE_REQ);
     }
 }

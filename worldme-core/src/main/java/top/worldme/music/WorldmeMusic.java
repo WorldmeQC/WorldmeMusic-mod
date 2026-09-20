@@ -35,6 +35,11 @@ public class WorldmeMusic {
     @Setter
     private static int playMode = MODE_SERVER;
 
+    /** 曲目自然播放结束时的回调（由平台层设置，用于个人歌单自动续播）。 */
+    @Getter
+    @Setter
+    private static Runnable trackEndListener;
+
     public static void onEnable() {
         if (player != null) {
             player.destroy();
@@ -49,6 +54,10 @@ public class WorldmeMusic {
             @Override
             public void onTrackEnded() {
                 log.info("Worldme native track ended");
+                Runnable listener = trackEndListener;
+                if (listener != null) {
+                    listener.run();
+                }
             }
 
             @Override

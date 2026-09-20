@@ -4,7 +4,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import top.worldme.music.PacketTags;
+import top.worldme.music.WorldmeMusic;
 import top.worldme.music.event.ClientEvent;
+import top.worldme.music.gui.CoverTextureCache;
+import top.worldme.music.manager.PersonalPlayback;
+import top.worldme.music.state.Lyrics;
 import top.worldme.music.state.MusicState;
 
 import java.util.ArrayList;
@@ -28,22 +33,60 @@ public final class MusicPacketHandler {
         if (message == null || message.isEmpty()) {
             return;
         }
-        if (message.startsWith("[PlayPriv]")) {
+        if (message.startsWith(PacketTags.PLAY_PRIV_FAIL)) {
+            PersonalPlayback.onPlayFail();
+        } else if (message.startsWith(PacketTags.PLAY_PRIV)) {
             MusicState state = MusicState.get();
             state.setLastServerUrl("");
-            state.markPersonalPlayingLatest();
+            state.clearLyrics();
+            PersonalPlayback.onPrivatePlayStarted();
+            prefetchCover(state.getPersonalCover());
             ClientEvent.onPacket(message);
-        } else if (message.startsWith("[Play]")) {
-            String url = message.substring("[Play]".length());
-            MusicState.get().setLastServerUrl(url);
-            MusicState.get().setLocalStopped(false);
+        } else if (message.startsWith(PacketTags.PLAY)) {
+            String url = message.substring(PacketTags.PLAY.length());
+            MusicState state = MusicState.get();
+            state.setLastServerUrl(url);
+            state.setLocalStopped(false);
+            state.clearLyrics();
+            prefetchCover(state.getCurrentCover());
             ClientEvent.onPacket(message);
-        } else if (message.startsWith("[Queue]")) {
-            handleQueue(message.substring("[Queue]".length()));
-        } else if (message.startsWith("[SearchResult]")) {
-            handleSearchResult(message.substring("[SearchResult]".length()));
+        } else if (PacketTags.STOP.equals(message)) {
+            MusicState.get().clearLyrics();
+            ClientEvent.onPacket(message);
+        } else if (message.startsWith(PacketTags.COVER_PRIV)) {
+            String coverUrl = message.substring(PacketTags.COVER_PRIV.length());
+            if (!coverUrl.isBlank()) {
+                MusicState.get().setPersonalCover(coverUrl);
+                prefetchCover(coverUrl);
+            }
+        } else if (message.startsWith(PacketTags.COVER)) {
+            String coverUrl = message.substring(PacketTags.COVER.length());
+            if (!coverUrl.isBlank()) {
+                MusicState.get().setCurrentCover(coverUrl);
+                prefetchCover(coverUrl);
+            }
+        } else if (message.startsWith(PacketTags.LYRIC_PRIV)) {
+            if (WorldmeMusic.getPlayMode() == WorldmeMusic.MODE_PERSONAL) {
+                MusicState.get().setLyrics(Lyrics.parse(message.substring(PacketTags.LYRIC_PRIV.length())));
+            }
+        } else if (message.startsWith(PacketTags.LYRIC)) {
+            if (WorldmeMusic.getPlayMode() == WorldmeMusic.MODE_SERVER) {
+                MusicState.get().setLyrics(Lyrics.parse(message.substring(PacketTags.LYRIC.length())));
+            }
+        } else if (message.startsWith(PacketTags.SEARCH_ERROR)) {
+            MusicState.get().markSearchFailed(message.substring(PacketTags.SEARCH_ERROR.length()));
+        } else if (message.startsWith(PacketTags.QUEUE)) {
+            handleQueue(message.substring(PacketTags.QUEUE.length()));
+        } else if (message.startsWith(PacketTags.SEARCH_RESULT)) {
+            handleSearchResult(message.substring(PacketTags.SEARCH_RESULT.length()));
         } else {
             ClientEvent.onPacket(message);
+        }
+    }
+
+    private static void prefetchCover(String url) {
+        if (url != null && !url.isBlank()) {
+            CoverTextureCache.get().get(url);
         }
     }
 
@@ -54,10 +97,12 @@ public final class MusicPacketHandler {
             int total = getInt(root, "total", 0);
             String currentName = "";
             String currentArtist = "";
+            String currentCover = "";
             if (root.has("current") && root.get("current").isJsonObject()) {
                 JsonObject current = root.getAsJsonObject("current");
                 currentName = getString(current, "name", "");
                 currentArtist = getString(current, "artist", "");
+                currentCover = getString(current, "cover", "");
             }
             List<MusicState.Song> next = new ArrayList<>();
             if (root.has("next") && root.get("next").isJsonArray()) {
@@ -69,10 +114,16 @@ public final class MusicPacketHandler {
                     next.add(new MusicState.Song(0,
                             getString(obj, "name", ""),
                             getString(obj, "artist", ""),
-                            "", 0));
+                            "", 0,
+                            getString(obj, "cover", "")));
                 }
             }
-            state.setQueue(total, currentName, currentArtist, next);
+            // 若队列未携带封面但当前曲目未变，保留已有的播放时封面
+            if (currentCover.isBlank() && currentName.equals(state.getCurrentName())) {
+                currentCover = state.getCurrentCover();
+            }
+            state.setQueue(total, currentName, currentArtist, currentCover, next);
+            prefetchCover(currentCover);
         } catch (Exception ignored) {
         }
     }
@@ -95,7 +146,8 @@ public final class MusicPacketHandler {
                             getString(obj, "name", ""),
                             getString(obj, "artist", ""),
                             getString(obj, "album", ""),
-                            getLong(obj, "duration", 0)));
+                            getLong(obj, "duration", 0),
+                            getString(obj, "cover", "")));
                 }
             }
             state.setSearchResults(keyword, offset, songs);

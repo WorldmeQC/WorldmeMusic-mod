@@ -1,6 +1,7 @@
 package top.worldme.music.event;
 
 import lombok.extern.log4j.Log4j2;
+import top.worldme.music.PacketTags;
 import top.worldme.music.WorldmeMusic;
 
 /**
@@ -20,19 +21,19 @@ public class ClientEvent {
             return;
         }
         log.info("Received WorldmeMusic packet message: {}", message);
-        if (message.startsWith("[PlayPriv]")) {
-            String data = message.substring("[PlayPriv]".length());
+        if (message.startsWith(PacketTags.PLAY_PRIV)) {
+            String data = message.substring(PacketTags.PLAY_PRIV.length());
             log.info("Parsed WorldmeMusic private play command: {}", data);
             PacketEvent.onPlayPrivate(data);
-        } else if (message.startsWith("[Play]")) {
-            String data = message.substring("[Play]".length());
+        } else if (message.startsWith(PacketTags.PLAY)) {
+            String data = message.substring(PacketTags.PLAY.length());
             if (WorldmeMusic.getPlayMode() == WorldmeMusic.MODE_PERSONAL) {
                 log.info("Personal mode enabled, ignored server-wide play: {}", data);
                 return;
             }
             log.info("Parsed WorldmeMusic play command: {}", data);
             PacketEvent.onPlay(data);
-        } else if ("[Stop]".equals(message)) {
+        } else if (PacketTags.STOP.equals(message)) {
             if (WorldmeMusic.getPlayMode() == WorldmeMusic.MODE_PERSONAL) {
                 log.info("Personal mode enabled, ignored server-wide stop");
                 return;
