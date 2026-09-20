@@ -1,0 +1,12 @@
+[tools]
+java = ["temurin-25"]
+
+[tasks.clean]
+run = '''
+./gradlew clean --no-daemon
+'''
+
+[tasks.build]
+run = '''
+./gradlew clean build --no-daemon
+'''

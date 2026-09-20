@@ -1,0 +1,11 @@
+//file:noinspection GroovyMissingReturnStatement
+//file:noinspection VulnerableLibrariesLocal
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+dependencies {
+    compileOnly 'org.apache.logging.log4j:log4j-api:2.26.0'
+}
